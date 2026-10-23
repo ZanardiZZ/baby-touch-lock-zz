@@ -1,4 +1,5 @@
 <resources>
+    <string name="app_name">Baby Touch Lock</string>
     <string name="pin_enter_prompt">Enter PIN</string>
     <string name="pin_backspace">Backspace</string>
     <string name="pin_setup_title">Set 4-digit PIN</string>
