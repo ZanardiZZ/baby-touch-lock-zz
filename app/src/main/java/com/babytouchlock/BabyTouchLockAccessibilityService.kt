@@ -48,7 +48,7 @@ import androidx.core.content.ContextCompat
  *
  * Manages two overlay windows:
  * 1. Full-screen transparent barrier ([BabyTouchLockBackgroundView]) that blocks touches and system gestures.
- * 2. Floating unlock widget ([BabyTouchLockUnlockView]) that provides a vertical slide-to-unlock mechanism.
+ * 2. Floating unlock widget ([BabyTouchLockUnlockView]) with a four-digit PIN keypad.
  */
 class BabyTouchLockAccessibilityService : AccessibilityService() {
 
@@ -58,7 +58,7 @@ class BabyTouchLockAccessibilityService : AccessibilityService() {
     private var backgroundView: BabyTouchLockBackgroundView? = null
     private var backgroundViewLayoutParams: WindowManager.LayoutParams? = null
 
-    // Window 2: Floating unlock widget with vertical slider (FLAG_NOT_FOCUSABLE)
+    // Window 2: Floating unlock widget with four-digit PIN keypad
     private var unlockView: BabyTouchLockUnlockView? = null
     private var unlockViewLayoutParams: WindowManager.LayoutParams? = null
 
@@ -135,6 +135,10 @@ class BabyTouchLockAccessibilityService : AccessibilityService() {
      *                to finish its collapse animation smoothly.
      */
     fun lock(delayMs: Long = 0L) {
+        if (!PreferencesManager.hasPin(this)) {
+            Toast.makeText(this, R.string.pin_required_before_lock, Toast.LENGTH_LONG).show()
+            return
+        }
         pendingLockRunnable?.let { handler.removeCallbacks(it) }
         pendingLockRunnable = null
 

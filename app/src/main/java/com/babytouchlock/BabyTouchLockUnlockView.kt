@@ -1,49 +1,21 @@
-/*
- * Baby Touch Lock
- * Copyright (C) 2026 Davide Micieli
- *
- * SPDX-License-Identifier: GPL-3.0-or-later
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
 package com.babytouchlock
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.util.AttributeSet
-import android.view.MotionEvent
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.TextView
-import kotlin.math.abs
 
-/**
- * Compact floating unlock widget (Window 2 in WindowManager).
- *
- * Displays a floating semi-transparent lock button that expands into a vertical slide-to-unlock
- * slider upon touch. Configured with `FLAG_NOT_FOCUSABLE` to avoid interfering with the underlying screen.
- */
+/** Floating unlock widget with a four-digit PIN keypad. */
 class BabyTouchLockUnlockView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
 ) : FrameLayout(context, attrs, defStyleAttr) {
-
     private var btnFloatingUnlock: TextView? = null
-    private var sliderContainer: FrameLayout? = null
-    private var sliderThumb: TextView? = null
+    private var pinContainer: FrameLayout? = null
+    private var pinDisplay: TextView? = null
+    private var pin = ""
     private var onUnlockConfirmed: (() -> Unit)? = null
 
     init {
@@ -54,98 +26,56 @@ class BabyTouchLockUnlockView @JvmOverloads constructor(
     override fun onFinishInflate() {
         super.onFinishInflate()
         btnFloatingUnlock = findViewById(R.id.btn_floating_unlock)
-        sliderContainer = findViewById(R.id.slider_container)
-        sliderThumb = findViewById(R.id.slider_thumb)
-        setupSliderTouchListener()
+        pinContainer = findViewById(R.id.pin_container)
+        pinDisplay = findViewById(R.id.pin_display)
+        btnFloatingUnlock?.setOnClickListener {
+            btnFloatingUnlock?.visibility = View.GONE
+            pinContainer?.visibility = View.VISIBLE
+        }
+        listOf(
+            R.id.pin_0, R.id.pin_1, R.id.pin_2, R.id.pin_3, R.id.pin_4,
+            R.id.pin_5, R.id.pin_6, R.id.pin_7, R.id.pin_8, R.id.pin_9
+        ).forEach { id ->
+            findViewById<TextView>(id)?.setOnClickListener {
+                appendDigit((it as TextView).text.toString())
+            }
+        }
+        findViewById<TextView>(R.id.pin_backspace)?.setOnClickListener { backspace() }
+        findViewById<TextView>(R.id.pin_clear)?.setOnClickListener { clearPin() }
+        findViewById<TextView>(R.id.pin_submit)?.setOnClickListener {
+            if (pin.length == 4 && PreferencesManager.verifyPin(context, pin)) onUnlockConfirmed?.invoke()
+            else clearPin()
+        }
     }
 
-    /**
-     * Registers a callback invoked when the user successfully completes the unlock slider drag.
-     */
     fun setOnUnlockConfirmedListener(listener: () -> Unit) {
-        this.onUnlockConfirmed = listener
+        onUnlockConfirmed = listener
     }
 
-    /**
-     * Resets the widget to its initial collapsed state showing only the floating lock icon.
-     */
     fun resetToInitialState() {
         btnFloatingUnlock?.visibility = View.VISIBLE
         btnFloatingUnlock?.alpha = 0.5f
-        sliderContainer?.visibility = View.GONE
-        sliderThumb?.translationY = 0f
-        sliderThumb?.text = context.getString(R.string.lock_icon_locked)
-        sliderThumb?.alpha = 0.7f
+        pinContainer?.visibility = View.GONE
+        clearPin()
     }
 
-    @SuppressLint("ClickableViewAccessibility")
-    private fun setupSliderTouchListener() {
-        var initialRawY = 0f
-        var maxDragDistance = 0f
-        var isUnlockedTriggered = false
+    private fun appendDigit(digit: String) {
+        if (pin.length < 4) pin += digit
+        updatePinDisplay()
+    }
 
-        val touchListener = View.OnTouchListener { _, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    initialRawY = event.rawY
-                    isUnlockedTriggered = false
+    private fun backspace() {
+        if (pin.isNotEmpty()) pin = pin.dropLast(1)
+        updatePinDisplay()
+    }
 
-                    btnFloatingUnlock?.visibility = View.GONE
-                    sliderContainer?.visibility = View.VISIBLE
+    private fun clearPin() {
+        pin = ""
+        updatePinDisplay()
+    }
 
-                    val trackH = sliderContainer?.height ?: 0
-                    val thumbH = sliderThumb?.height ?: 0
-                    val minDrag = resources.getDimension(R.dimen.slider_min_drag_distance)
-                    maxDragDistance = (trackH - thumbH - 16).toFloat().coerceAtLeast(minDrag)
-
-                    sliderThumb?.translationY = 0f
-                    sliderThumb?.text = context.getString(R.string.lock_icon_locked)
-                    sliderThumb?.alpha = 0.7f
-                    true
-                }
-
-                MotionEvent.ACTION_MOVE -> {
-                    if (isUnlockedTriggered) return@OnTouchListener true
-
-                    val deltaY = event.rawY - initialRawY
-                    if (deltaY < 0) { // Dragging upwards
-                        val targetY = deltaY.coerceIn(-maxDragDistance, 0f)
-                        sliderThumb?.translationY = targetY
-
-                        val progress = abs(targetY) / maxDragDistance
-                        sliderThumb?.alpha = 0.6f + (progress * 0.4f)
-
-                        // Unlock confirmed when reaching 95% of vertical travel distance
-                        if (progress >= 0.95f) {
-                            isUnlockedTriggered = true
-                            sliderThumb?.text = context.getString(R.string.lock_icon_unlocked)
-                            onUnlockConfirmed?.invoke()
-                        }
-                    }
-                    true
-                }
-
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    if (!isUnlockedTriggered) {
-                        val animDuration = resources.getInteger(R.integer.slider_reset_anim_duration_ms).toLong()
-                        sliderThumb?.animate()
-                            ?.translationY(0f)
-                            ?.setDuration(animDuration)
-                            ?.withEndAction {
-                                resetToInitialState()
-                            }
-                            ?.start()
-                    }
-                    true
-                }
-
-                else -> false
-            }
-        }
-
-        btnFloatingUnlock?.setOnTouchListener(touchListener)
-        sliderContainer?.setOnTouchListener(touchListener)
-        sliderThumb?.setOnTouchListener(touchListener)
+    private fun updatePinDisplay() {
+        pinDisplay?.text = if (pin.isEmpty()) context.getString(R.string.pin_enter_prompt)
+        else "• ".repeat(pin.length).trim()
     }
 }
-

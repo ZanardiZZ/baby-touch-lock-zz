@@ -47,6 +47,7 @@ class MainActivity : AppCompatActivity() {
 
         setupVolumeSwitch()
         setupPowerWakeSwitch()
+        setupPin()
         setupButtons()
         checkPermissionsUI()
     }
@@ -77,6 +78,40 @@ class MainActivity : AppCompatActivity() {
             val state = getString(if (isChecked) R.string.state_on else R.string.state_off)
             val msg = getString(R.string.setting_state_format, getString(R.string.power_lock_switch_label), state)
             Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun setupPin() {
+        binding.btnSetPin.setOnClickListener {
+            val input = android.widget.EditText(this).apply {
+                inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
+                filters = arrayOf(android.text.InputFilter.LengthFilter(4))
+                hint = getString(R.string.pin_setup_hint)
+            }
+            val confirmation = android.widget.EditText(this).apply {
+                inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
+                filters = arrayOf(android.text.InputFilter.LengthFilter(4))
+                hint = getString(R.string.pin_confirm_hint)
+            }
+            val fields = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                setPadding(48, 0, 48, 0)
+                addView(input)
+                addView(confirmation)
+            }
+            MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.pin_setup_title)
+                .setView(fields)
+                .setNegativeButton(R.string.dialog_consent_cancel, null)
+                .setPositiveButton(R.string.dialog_ok) { _, _ ->
+                    val pin = input.text.toString()
+                    if (pin == confirmation.text.toString() && PreferencesManager.setPin(this, pin)) {
+                        Toast.makeText(this, R.string.pin_saved, Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this, R.string.pin_invalid, Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .show()
         }
     }
 
