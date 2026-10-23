@@ -18,7 +18,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.babytouchlock"
+        applicationId = "com.babytouchlock.pin"
         minSdk = 26
         targetSdk = 36
         versionCode = 2
