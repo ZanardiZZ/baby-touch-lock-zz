@@ -39,6 +39,7 @@ import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
+import android.util.Log
 import android.widget.Toast
 
 import androidx.core.content.ContextCompat
@@ -52,6 +53,11 @@ import androidx.core.content.ContextCompat
  */
 class BabyTouchLockAccessibilityService : AccessibilityService() {
 
+    companion object {
+        private const val TAG = "BabyTouchLock"
+        var instance: BabyTouchLockAccessibilityService? = null
+        var isLocked = false
+    }
     private var windowManager: WindowManager? = null
 
     // Window 1: Full-screen background barrier (blocks touch and edge navigation gestures)
@@ -87,6 +93,7 @@ class BabyTouchLockAccessibilityService : AccessibilityService() {
         super.onServiceConnected()
         instance = this
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+        Log.i(TAG, "service connected")
 
         val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
         ContextCompat.registerReceiver(this, screenStateReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
@@ -262,11 +269,23 @@ class BabyTouchLockAccessibilityService : AccessibilityService() {
             y = resources.getDimensionPixelSize(R.dimen.floating_unlock_margin_y)
         }
 
-        try {
-            wm.addView(backgroundView, backgroundViewLayoutParams)
-            wm.addView(unlockView, unlockViewLayoutParams)
-            backgroundView?.requestApplyInsets()
-        } catch (_: Exception) {}
+        if (wm != null) {
+            try {
+                wm.addView(backgroundView, backgroundViewLayoutParams)
+                wm.addView(unlockView, unlockViewLayoutParams)
+                backgroundView?.requestApplyInsets()
+                Log.i(TAG, "lock windows added")
+            } catch (e: Exception) {
+                isLocked = false
+                BabyTouchLockTileService.updateTile(this, false)
+                Log.e(TAG, "could not add lock windows", e)
+                backgroundView = null
+                unlockView = null
+                backgroundViewLayoutParams = null
+                unlockViewLayoutParams = null
+                Toast.makeText(this, R.string.lock_failed_toast, Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     private fun hideLockWindows() {
@@ -397,8 +416,4 @@ class BabyTouchLockAccessibilityService : AccessibilityService() {
         return super.onKeyEvent(event)
     }
 
-    companion object {
-        var instance: BabyTouchLockAccessibilityService? = null
-        var isLocked = false
-    }
 }

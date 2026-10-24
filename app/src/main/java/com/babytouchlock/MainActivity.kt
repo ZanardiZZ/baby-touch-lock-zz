@@ -172,8 +172,15 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
+            if (!PreferencesManager.hasPin(this)) {
+                Toast.makeText(this, R.string.pin_required_before_lock, Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
+
             service.lock()
-            moveTaskToBack(true)
+            if (BabyTouchLockAccessibilityService.isLocked) {
+                moveTaskToBack(true)
+            }
         }
     }
 

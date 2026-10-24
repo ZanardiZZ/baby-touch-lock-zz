@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.AttributeSet
 import android.view.View
 import android.widget.FrameLayout
+import android.widget.LinearLayout
 import android.widget.TextView
 
 /** Floating unlock widget with a four-digit PIN keypad. */
@@ -13,7 +14,7 @@ class BabyTouchLockUnlockView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : FrameLayout(context, attrs, defStyleAttr) {
     private var btnFloatingUnlock: TextView? = null
-    private var pinContainer: FrameLayout? = null
+    private var pinContainer: LinearLayout? = null
     private var pinDisplay: TextView? = null
     private var pin = ""
     private var onUnlockConfirmed: (() -> Unit)? = null

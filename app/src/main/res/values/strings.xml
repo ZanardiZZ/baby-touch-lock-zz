@@ -8,6 +8,7 @@
     <string name="pin_saved">PIN saved</string>
     <string name="pin_invalid">PIN must contain exactly 4 digits</string>
     <string name="pin_required_before_lock">Set a PIN before locking the screen</string>
+    <string name="lock_failed_toast">Could not start the lock. Check the app log.</string>
     <string name="tile_label">Baby Lock</string>
     <string name="accessibility_service_label">Baby Touch Lock Service</string>
     <string name="accessibility_service_description">Prevents accidental touches, navigation gestures, notification shade expansion, and volume key presses to protect media playback.</string>
